@@ -9,7 +9,7 @@
 | Task-03 | 后端素材数据模型与 MinIO 封装 | 🔄 | | 进行中（生成迁移文件） |
 | Task-04 | 后端素材上传与异步处理接口 | 🔄 | | 进行中（文件存在，需验证完整性） |
 | Task-05 | 前端编辑器主布局框架 | ⬜ | | 未开始 |
-| Task-06 | 前端素材面板（上传+列表） | ⬜ | | 未开始 |
+| Task-06 | 前端素材面板（上传+列表） | ✅ | 2026-03-23 | 已完成 |
 | Task-07 | 后端时间线存储与导出模型 | ⬜ | | |
 | Task-08 | 后端视频导出 Celery 任务 | ⬜ | | |
 | Task-09 | 前端视频播放器组件 | ⬜ | | |
@@ -45,62 +45,9 @@
 
 ## 当前工作状态
 
-**Task-01: 前端工程脚手架搭建** (beads-planning-brb) ✅
-- 状态：已完成
-- 备注：前端脚手架已搭建完成
+当前无进行中的文件修改。
 
-**Task-02: 后端工程脚手架搭建（验证与完善）** (beads-planning-5uv) ✅
-- 状态：已完成
-- 备注：后端脚手架验证完成，基本满足要求
-- 依赖：Task-01 已完成
 
-**Task-03: 后端素材数据模型与 MinIO 存储封装（完成迁移）** (beads-planning-k3n) ✅
-- 状态：已完成
-- 完成时间：2026-03-23
-- 目标：生成并运行 Alembic 迁移文件，完成 StorageService 封装
-- 依赖：Task-02 已完成
-
-**Task-04: 后端素材上传与异步处理接口（完善实现）** (beads-planning-65a) ✅
-- 状态：已完成
-- 完成时间：2026-03-23
-- 目标：完善素材上传接口和 Celery 异步处理任务
-- 依赖：Task-03 已完成
-
-**Task-05: 前端编辑器主布局框架** (beads-planning-6i7) ✅
-- 状态：已完成
-- 完成时间：2026-03-23
-- 目标：实现编辑器页面整体布局
-- 依赖：Task-01 已完成
-
-**Task-06: 前端素材面板（上传+列表）** (beads-planning-wym) 🔄
-- 状态：进行中
-- 目标：实现素材面板完整功能
-- 依赖：Task-04 和 Task-05 已完成
-
-### Task-04 文件修改状态
-正在修改的文件：
-- `backend/core/celery_app.py` [已完成]
-- `backend/api/v1/routers/assets.py` [已完成]
-- `backend/tasks/process_asset.py` [已完成]
-- `backend/services/ws_manager.py` [已完成]
-- `backend/main.py` [已完成]
-
-### Task-05 文件修改状态
-正在修改的文件：
-- `src/pages/Editor/index.tsx` [已完成]
-- `src/components/Editor/TopBar.tsx` [已完成]
-- `src/components/Editor/AssetPanel/index.tsx` [已完成]
-- `src/components/Editor/PlayerSection/index.tsx` [已完成]
-- `src/components/Editor/PropertyPanel/index.tsx` [已完成]
-- `src/components/Editor/Timeline/index.tsx` [已完成]
-
-### Task-06 文件修改状态
-正在修改的文件：
-- `src/hooks/useAssets.ts` [待修改]
-- `src/components/Editor/AssetPanel/AssetCard.tsx` [待修改]
-- `src/components/Editor/AssetPanel/index.tsx` [待修改]
-- `src/lib/apiPaths.ts` [待修改]
-- `src/lib/queryKeys.ts` [待修改]
 
 ## 已知问题/阻塞事项
 
@@ -113,7 +60,7 @@
 ## 里程碑
 
 - [ ] MVP 里程碑 1：基础设施完成（Task-01、Task-02）
-- [ ] MVP 里程碑 2：素材上传与处理全链路（Task-03、Task-04、Task-06）
+- [x] MVP 里程碑 2：素材上传与处理全链路（Task-03、Task-04、Task-06）
 - [ ] MVP 里程碑 3：时间线编辑能力（Task-05、Task-09、Task-10、Task-11、Task-12）
 - [ ] MVP 里程碑 4：导出与项目管理（Task-08、Task-13、Task-14）
 - [ ] MVP 最终验收（Task-15）
