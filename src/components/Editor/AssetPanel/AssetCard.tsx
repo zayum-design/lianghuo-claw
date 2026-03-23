@@ -218,6 +218,7 @@ const AssetCard: React.FC<AssetCardProps> = ({
       {...attributes}
       {...listeners}
       className="relative bg-[#1a1a1a] rounded-lg overflow-hidden cursor-pointer"
+      data-testid={displayAssetId ? `asset-card-${displayAssetId}` : 'asset-card'}
       style={{
         paddingTop: '56.25%', // 16:9 比例
         opacity: isDragging ? 0.5 : 1,
@@ -230,4 +231,18 @@ const AssetCard: React.FC<AssetCardProps> = ({
   )
 }
 
-export default AssetCard
+// 自定义比较函数，确保assetId相同时不重渲染
+const areEqual = (prevProps: AssetCardProps, nextProps: AssetCardProps) => {
+  // 如果asset存在，比较asset.id
+  if (prevProps.asset?.id && nextProps.asset?.id) {
+    return prevProps.asset.id === nextProps.asset.id
+  }
+  // 否则比较assetId
+  if (prevProps.assetId && nextProps.assetId) {
+    return prevProps.assetId === nextProps.assetId
+  }
+  // 如果都没有ID，使用浅比较
+  return false
+}
+
+export default React.memo(AssetCard, areEqual)

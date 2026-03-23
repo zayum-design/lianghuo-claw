@@ -213,6 +213,7 @@ const ExportModal: React.FC<ExportModalProps> = ({ visible, onCancel }) => {
       maskClosable={false}
       footer={null}
       destroyOnClose
+      data-testid="export-modal"
     >
       {view === 'settings' ? (
         <Form
@@ -289,7 +290,12 @@ const ExportModal: React.FC<ExportModalProps> = ({ visible, onCancel }) => {
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
             <Button onClick={handleCancel}>取消</Button>
-            <Button type="primary" onClick={handleStartExport} loading={startExportMutation.isPending}>
+            <Button
+              type="primary"
+              onClick={handleStartExport}
+              loading={startExportMutation.isPending}
+              data-testid="start-export-button"
+            >
               开始导出
             </Button>
           </div>
@@ -314,6 +320,7 @@ const ExportModal: React.FC<ExportModalProps> = ({ visible, onCancel }) => {
                   ? '#52c41a'
                   : '#1890ff'
             }
+            data-testid="export-progress-bar"
           />
 
           <div style={{ marginTop: 16, marginBottom: 24 }}>
@@ -325,7 +332,9 @@ const ExportModal: React.FC<ExportModalProps> = ({ visible, onCancel }) => {
                   : currentExport?.stage || '准备中...'}
             </div>
             {currentExport?.status === 'processing' && (
-              <div style={{ color: '#666' }}>进度：{currentExport.progress}%</div>
+              <div style={{ color: '#666' }} data-testid="export-progress-text">
+                进度：{currentExport.progress}%
+              </div>
             )}
             {currentExport?.status === 'error' && currentExport.error && (
               <div style={{ color: '#ff4d4f', marginTop: 8 }}>{currentExport.error}</div>
@@ -335,7 +344,7 @@ const ExportModal: React.FC<ExportModalProps> = ({ visible, onCancel }) => {
           {currentExport?.status === 'completed' && currentExport.downloadUrl && (
             <div style={{ marginBottom: 16 }}>
               <a href={currentExport.downloadUrl} download>
-                <Button type="primary" size="large">
+                <Button type="primary" size="large" data-testid="download-button">
                   立即下载
                 </Button>
               </a>

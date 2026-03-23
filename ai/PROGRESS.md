@@ -30,8 +30,8 @@
 | task-11 | 前端时间线 Canvas 渲染 | ✅ 已完成 | 2026-03-23 | — |
 | task-12 | 前端时间线交互——拖拽、分割、选中 | ✅ 已完成 | 2026-03-23 | 拖拽移动、裁剪、分割、删除、工具栏、从素材面板拖入素材已实现 |
 | task-13 | 前端导出面板与 WebSocket 进度 | ✅ 已完成 | 2026-03-23 | 导出Modal组件、exportStore完善、TopBar集成、WebSocket进度接收已实现 |
-| task-14 | 项目管理——后端与前端 | ⬜ 未开始 | — | — |
-| task-15 | 端到端集成测试与 MVP 打磨 | ⬜ 未开始 | — | — |
+| task-14 | 项目管理——后端与前端 | ✅ 已完成 | 2026-03-23 | — |
+| task-15 | 端到端集成测试与 MVP 打磨 | 🔄 进行中 | — | — |
 
 **状态图例**：⬜ 未开始 / 🔄 进行中 / ✅ 已完成 / ❌ 阻塞中
 
@@ -41,8 +41,22 @@
 
 > **实时更新规则**：每次修改文件前，在此处记录`文件名[修改中]`；修改完成后立即改为`文件名[已完成]`。
 
-**当前进行中的文件修改：**
-无
+- `ai/PROGRESS.md` [已完成] - 更新Task-15状态为进行中
+- `playwright.config.ts` [已完成] - 创建Playwright配置
+- `tests/e2e/test-01-upload-and-export.spec.ts` [已完成] - 创建核心链路E2E测试
+- `tests/e2e/test-02-timeline-operations.spec.ts` [已完成] - 创建时间线操作E2E测试
+- `tests/e2e/test-03-project-management.spec.ts` [已完成] - 创建项目管理E2E测试
+- `backend/tests/test_timeline_operations.py` [已完成] - 创建时间线操作单元测试
+- `backend/tests/test_export_ffmpeg.py` [已完成] - 创建导出FFmpeg单元测试
+- `backend/tests/test_asset_processing.py` [已完成] - 创建素材处理单元测试
+- `src/components/ErrorBoundary.tsx` [已完成] - 创建React错误边界组件
+- `src/pages/Editor/index.tsx` [已完成] - 添加错误边界包裹
+- `src/components/AssetPanel/AssetCard.tsx` [已完成] - 添加React.memo优化
+- `src/components/Editor/TopBar.tsx` [已完成] - 添加data-testid属性
+- `src/components/Editor/AssetPanel/AssetCard.tsx` [已完成] - 添加data-testid属性
+- `src/components/Editor/AssetPanel/index.tsx` [已完成] - 添加data-testid属性
+- `src/components/Editor/Timeline/index.tsx` [已完成] - 添加data-testid属性
+- `src/components/Editor/ExportModal.tsx` [已完成] - 添加data-testid属性
 
 ---
 ## 依赖关系图
@@ -82,7 +96,7 @@ task-15 (集成测试) ─→ 依赖所有前置 Task 完成
 
 ### M1：Web MVP（目标：第8周末）
 - [ ] M0 全部完成
-- [ ] 项目管理（新建/列表/删除）
+- [x] 项目管理（新建/列表/删除）
 - [ ] E2E 核心流程测试通过
 - [ ] 错误处理完善
 

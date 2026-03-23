@@ -16,15 +16,19 @@ import { useTimelineSync } from '@/hooks/useTimelineSync'
 
 import ExportModal from './ExportModal'
 
+interface TopBarProps {
+  projectId?: string
+}
+
 const { Text } = Typography
 
-const TopBar: React.FC = () => {
+const TopBar: React.FC<TopBarProps> = ({ projectId }) => {
   const [projectName, setProjectName] = useState<string>('未命名项目')
   const [isEditing, setIsEditing] = useState<boolean>(false)
   const [exportModalVisible, setExportModalVisible] = useState<boolean>(false)
   const [lastSavedTime, setLastSavedTime] = useState<number | null>(null)
 
-  const { isSaving, isError } = useTimelineSync()
+  const { isSaving, isError } = useTimelineSync(projectId)
   const prevIsSavingRef = useRef<boolean>(false)
 
   // 监听保存完成，记录时间戳
@@ -95,7 +99,10 @@ const TopBar: React.FC = () => {
 
   return (
     <>
-      <div className="h-12 flex-shrink-0 bg-[#242424] border-b border-[#333333] flex items-center px-4">
+      <div
+        className="h-12 flex-shrink-0 bg-[#242424] border-b border-[#333333] flex items-center px-4"
+        data-testid="top-bar"
+      >
         {/* 左侧区域 */}
         <div className="flex items-center flex-1">
           {/* 由于 Logo SVG 可能不存在，暂时使用文字代替 */}
@@ -143,7 +150,7 @@ const TopBar: React.FC = () => {
 
         {/* 右侧区域 */}
         <div className="flex items-center flex-1 justify-end">
-          <Button type="primary" icon={<ExportOutlined />} onClick={handleExportClick}>
+          <Button type="primary" icon={<ExportOutlined />} onClick={handleExportClick} data-testid="export-button">
             导出
           </Button>
         </div>

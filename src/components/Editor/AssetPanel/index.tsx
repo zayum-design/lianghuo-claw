@@ -323,6 +323,7 @@ const AssetPanel: React.FC = () => {
           customRequest={handleUpload}
           accept={ALLOWED_MIME_TYPES.join(',')}
           disabled={presignMutation.isPending}
+          data-testid="asset-upload-area"
         >
           <div className="py-4">
             <p className="ant-upload-drag-icon">

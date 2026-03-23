@@ -151,7 +151,12 @@ const Timeline: React.FC<TimelineProps> = ({ dropZoneActive = false, onInsertPos
       </div>
 
       {/* 轨道容器区域（可滚动） */}
-      <div ref={containerRef} className="flex-1 overflow-auto relative" onScroll={handleScroll}>
+      <div
+        ref={containerRef}
+        className="flex-1 overflow-auto relative"
+        onScroll={handleScroll}
+        data-testid="timeline-tracks"
+      >
         <div
           style={{
             width: '100%',
@@ -187,6 +192,7 @@ const Timeline: React.FC<TimelineProps> = ({ dropZoneActive = false, onInsertPos
             }}
             onMouseMove={handleDropZoneMouseMove}
             onMouseLeave={handleDropZoneMouseLeave}
+            data-testid="timeline-drop-zone"
           />
         </div>
       </div>
