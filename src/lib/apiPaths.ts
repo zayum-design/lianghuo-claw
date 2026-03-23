@@ -16,6 +16,7 @@ export const API_PATHS = {
   timelines: {
     detail: (id: string) => `/v1/timelines/${id}`,
     update: (id: string) => `/v1/timelines/${id}`,
+    default: '/v1/timelines/default',
   },
   // 导出相关（Task-08）
   exports: {
