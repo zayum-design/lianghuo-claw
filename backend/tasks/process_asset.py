@@ -165,6 +165,103 @@ def generate_thumbnail(video_path: Path, output_path: Path, asset_id: uuid.UUID)
         return None
 
 
+def generate_frame_sequence(video_path: Path, temp_dir: Path, asset_id: uuid.UUID) -> Optional[str]:
+    """生成时间线帧序列（每秒1帧，160x90）"""
+    try:
+        # 创建帧序列输出目录
+        frames_dir = temp_dir / "frames"
+        frames_dir.mkdir(exist_ok=True)
+
+        # 使用FFmpeg提取帧序列（每秒1帧）
+        output_pattern = frames_dir / "frame_%04d.jpg"
+        (
+            ffmpeg
+            .input(str(video_path))
+            .filter("fps", fps=1)
+            .filter("scale", 160, 90, force_original_aspect_ratio="decrease")
+            .filter("pad", 160, 90, "(ow-iw)/2", "(oh-ih)/2")
+            .output(str(output_pattern), loglevel="error")
+            .run(overwrite_output=True, capture_stdout=True, capture_stderr=True)
+        )
+
+        # 上传所有帧文件到MinIO
+        frame_files = sorted(frames_dir.glob("frame_*.jpg"))
+        if not frame_files:
+            logger.warning(f"No frame files generated for asset {asset_id}")
+            return None
+
+        for i, frame_file in enumerate(frame_files, start=1):
+            frame_key = f"{asset_id}/frames/frame_{i:04d}.jpg"
+            with open(frame_file, "rb") as f:
+                storage_service.upload_bytes(
+                    bucket=storage_service.BUCKETS["thumbnails"],
+                    key=frame_key,
+                    data=f.read(),
+                    content_type="image/jpeg"
+                )
+
+        # 返回帧序列前缀（用于数据库存储）
+        return f"{asset_id}/frames/"
+
+    except Exception as e:
+        logger.error(f"Failed to generate frame sequence: {e}")
+        return None
+
+
+def generate_waveform(video_path: Path, asset_id: uuid.UUID) -> Optional[str]:
+    """生成音频波形数据（峰值数组）"""
+    try:
+        # 使用FFmpeg提取音频为PCM RAW格式
+        pcm_path = video_path.parent / "audio.pcm"
+        (
+            ffmpeg
+            .input(str(video_path))
+            .output(str(pcm_path),
+                   ac=1, ar=8000, f='s16le', acodec='pcm_s16le',
+                   loglevel="error")
+            .run(overwrite_output=True, capture_stdout=True, capture_stderr=True)
+        )
+
+        # 读取PCM数据（16位有符号整数，小端序）
+        with open(pcm_path, "rb") as f:
+            pcm_data = f.read()
+
+        # 将字节数据解析为int16数组
+        # 每2个字节为一个采样点
+        sample_count = len(pcm_data) // 2
+        samples = []
+        for i in range(0, len(pcm_data), 2):
+            sample = struct.unpack('<h', pcm_data[i:i+2])[0]  # 有符号16位整数
+            samples.append(sample)
+
+        # 每80个采样取绝对值最大值作为一个峰值点
+        window_size = 80
+        peaks = []
+        for i in range(0, len(samples), window_size):
+            window = samples[i:i+window_size]
+            if window:
+                peak = max(abs(s) for s in window)
+                peaks.append(peak)
+
+        # 将峰值数组保存为JSON
+        waveform_json = json.dumps(peaks)
+        waveform_key = f"{asset_id}/waveform.json"
+
+        # 上传到MinIO
+        storage_service.upload_bytes(
+            bucket=storage_service.BUCKETS["thumbnails"],
+            key=waveform_key,
+            data=waveform_json.encode('utf-8'),
+            content_type="application/json"
+        )
+
+        return waveform_key
+
+    except Exception as e:
+        logger.error(f"Failed to generate waveform: {e}")
+        return None
+
+
 @shared_task(bind=True, name="process_asset_task", queue="media")
 def process_asset_task(self, asset_id: str) -> None:
     """
@@ -208,7 +305,17 @@ def process_asset_task(self, asset_id: str) -> None:
             thumbnail_path = temp_dir / "thumbnail.jpg"
             thumbnail_key = generate_thumbnail(local_file_path, thumbnail_path, asset_uuid)
 
-        # 5. 更新数据库
+        # 5. 生成帧序列（如果有视频流）
+        preview_frames_prefix = None
+        if metadata.get("width", 0) > 0:  # 有视频流
+            preview_frames_prefix = generate_frame_sequence(local_file_path, temp_dir, asset_uuid)
+
+        # 6. 生成波形数据（如果有音频流）
+        waveform_key = None
+        if metadata.get("codec_audio"):  # 有音频流
+            waveform_key = generate_waveform(local_file_path, asset_uuid)
+
+        # 7. 更新数据库
         update_fields = {
             "duration_ms": metadata["duration_ms"],
             "width": metadata["width"],
@@ -218,6 +325,8 @@ def process_asset_task(self, asset_id: str) -> None:
             "codec_video": metadata["codec_video"],
             "codec_audio": metadata["codec_audio"],
             "thumbnail_key": thumbnail_key,
+            "preview_frames_prefix": preview_frames_prefix,
+            "waveform_key": waveform_key,
             "status": "ready",
         }
         update_asset_status(asset_uuid, "ready", **update_fields)
