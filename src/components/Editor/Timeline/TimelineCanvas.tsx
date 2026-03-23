@@ -1,6 +1,10 @@
+/* eslint-disable import/default, import/no-unresolved */
 import React, { useEffect, useRef, useState, useCallback } from 'react'
+
 import { Stage, Layer, Rect, Line, Text, Group, Image } from 'react-konva'
+
 import { useEditorStore } from '@/stores/editorStore'
+import { frameCache } from '@/utils/frameCache'
 import {
   msToPixels,
   pixelsToMs,
@@ -10,7 +14,7 @@ import {
   getClipPixelWidth,
   getFrameIndexForMs,
 } from '@/utils/timeline'
-import { frameCache } from '@/utils/frameCache'
+
 import type { Track, Clip } from '@/types/timeline'
 
 // 刻度间隔档位（毫秒）
@@ -25,6 +29,13 @@ interface TimelineCanvasProps {
   scrollLeft: number
   /** 滚动回调 */
   onScrollLeftChange: (scrollLeft: number) => void
+  /** 插入位置指示器（素材拖拽悬停时显示） */
+  insertPosition?: {
+    /** 相对于可见区域的 x 坐标（已减去 scrollLeft） */
+    x: number
+    /** 对应的时间（毫秒） */
+    timeMs: number
+  } | null
 }
 
 /**
@@ -36,6 +47,7 @@ export const TimelineCanvas: React.FC<TimelineCanvasProps> = ({
   height,
   scrollLeft,
   onScrollLeftChange,
+  insertPosition = null,
 }) => {
   const editorStore = useEditorStore()
   const stageRef = useRef<any>(null)
@@ -49,15 +61,10 @@ export const TimelineCanvas: React.FC<TimelineCanvasProps> = ({
   const snapEnabled = editorStore.snapEnabled
 
   // 如果没有时间线数据，显示空状态
-  if (!timeline) {
-    return (
-      <div className="flex items-center justify-center w-full h-full bg-[#1a1a1a] text-gray-500">
-        加载时间线数据...
-      </div>
-    )
-  }
+  const isEmpty = !timeline
 
-  const { fps, tracks } = timeline
+  const fps = timeline?.fps || 30
+  const tracks = timeline?.tracks || []
 
   // 计算刻度尺高度
   const RULER_HEIGHT = 32
@@ -110,27 +117,11 @@ export const TimelineCanvas: React.FC<TimelineCanvasProps> = ({
       const x = msToPixels(ms, zoomLevel) - scrollLeft
 
       // 主刻度线
-      ticks.push(
-        <Line
-          key={`tick-${ms}`}
-          points={[x, 0, x, 16]}
-          stroke="#666666"
-          strokeWidth={1}
-        />
-      )
+      ticks.push(<Line key={`tick-${ms}`} points={[x, 0, x, 16]} stroke="#666666" strokeWidth={1} />)
 
       // 时间标签
       if (x >= 0 && x <= width) {
-        ticks.push(
-          <Text
-            key={`label-${ms}`}
-            x={x + 4}
-            y={2}
-            text={formatDuration(ms)}
-            fontSize={12}
-            fill="#999999"
-          />
-        )
+        ticks.push(<Text key={`label-${ms}`} x={x + 4} y={2} text={formatDuration(ms)} fontSize={12} fill="#999999" />)
       }
 
       // 次刻度线
@@ -139,14 +130,7 @@ export const TimelineCanvas: React.FC<TimelineCanvasProps> = ({
         const subMs = ms + i * subTickInterval
         const subX = msToPixels(subMs, zoomLevel) - scrollLeft
         if (subX >= 0 && subX <= width) {
-          ticks.push(
-            <Line
-              key={`subtick-${ms}-${i}`}
-              points={[subX, 0, subX, 8]}
-              stroke="#444444"
-              strokeWidth={1}
-            />
-          )
+          ticks.push(<Line key={`subtick-${ms}-${i}`} points={[subX, 0, subX, 8]} stroke="#444444" strokeWidth={1} />)
         }
       }
     }
@@ -158,18 +142,8 @@ export const TimelineCanvas: React.FC<TimelineCanvasProps> = ({
   const renderTrackBackgrounds = () => {
     return trackPositions.map(({ track, y }, index) => (
       <Group key={`track-bg-${track.id}`}>
-        <Rect
-          x={0}
-          y={y}
-          width={width}
-          height={track.height_px}
-          fill={index % 2 === 0 ? '#1e1e1e' : '#1a1a1a'}
-        />
-        <Line
-          points={[0, y + track.height_px, width, y + track.height_px]}
-          stroke="#333333"
-          strokeWidth={1}
-        />
+        <Rect x={0} y={y} width={width} height={track.height_px} fill={index % 2 === 0 ? '#1e1e1e' : '#1a1a1a'} />
+        <Line points={[0, y + track.height_px, width, y + track.height_px]} stroke="#333333" strokeWidth={1} />
       </Group>
     ))
   }
@@ -183,7 +157,7 @@ export const TimelineCanvas: React.FC<TimelineCanvasProps> = ({
     fps: number
   ) => {
     // 计算帧缩略图宽度（保持 16:9 宽高比）
-    const frameWidth = trackHeight * 16 / 9
+    const frameWidth = (trackHeight * 16) / 9
     if (frameWidth <= 0 || clipWidth <= 8) return null
 
     // 计算可显示的帧数
@@ -345,11 +319,7 @@ export const TimelineCanvas: React.FC<TimelineCanvasProps> = ({
     return (
       <Group>
         {/* 播放头竖线 */}
-        <Line
-          points={[playheadX, RULER_HEIGHT, playheadX, height - BOTTOM_PADDING]}
-          stroke="#ff4d4f"
-          strokeWidth={2}
-        />
+        <Line points={[playheadX, RULER_HEIGHT, playheadX, height - BOTTOM_PADDING]} stroke="#ff4d4f" strokeWidth={2} />
         {/* 顶部三角形标记 */}
         <Line
           points={[playheadX - 6, 8, playheadX, 0, playheadX + 6, 8]}
@@ -362,6 +332,30 @@ export const TimelineCanvas: React.FC<TimelineCanvasProps> = ({
               stage.container().style.cursor = 'col-resize'
             }
           }}
+        />
+      </Group>
+    )
+  }
+
+  // 渲染插入位置指示器
+  const renderInsertPosition = () => {
+    if (!insertPosition) return null
+
+    return (
+      <Group>
+        {/* 插入位置竖线（蓝色半透明） */}
+        <Line
+          points={[insertPosition.x, RULER_HEIGHT, insertPosition.x, height - BOTTOM_PADDING]}
+          stroke="#40a9ff"
+          strokeWidth={2}
+          opacity={0.7}
+        />
+        {/* 顶部三角形标记 */}
+        <Line
+          points={[insertPosition.x - 6, 8, insertPosition.x, 0, insertPosition.x + 6, 8]}
+          closed
+          fill="#40a9ff"
+          opacity={0.7}
         />
       </Group>
     )
@@ -443,42 +437,32 @@ export const TimelineCanvas: React.FC<TimelineCanvasProps> = ({
     }
   }, [currentTimeMs, zoomLevel, scrollLeft, height])
 
+  if (isEmpty) {
+    return (
+      <div className="flex items-center justify-center w-full h-full bg-[#1a1a1a] text-gray-500">加载时间线数据...</div>
+    )
+  }
+
   return (
-    <Stage
-      ref={stageRef}
-      width={width}
-      height={height}
-      onWheel={handleWheel}
-      style={{ backgroundColor: '#1a1a1a' }}
-    >
+    <Stage ref={stageRef} width={width} height={height} onWheel={handleWheel} style={{ backgroundColor: '#1a1a1a' }}>
       {/* 背景层：轨道背景 */}
-      <Layer listening={false}>
-        {renderTrackBackgrounds()}
-      </Layer>
+      <Layer listening={false}>{renderTrackBackgrounds()}</Layer>
 
       {/* Clip 层：所有 Clip 块 */}
-      <Layer listening={true}>
-        {renderClips()}
-      </Layer>
+      <Layer listening={true}>{renderClips()}</Layer>
 
       {/* 刻度尺层：始终在最顶部 */}
       <Layer listening={false}>
         {/* 刻度尺背景 */}
-        <Rect
-          x={0}
-          y={0}
-          width={width}
-          height={RULER_HEIGHT}
-          fill="#2a2a2a"
-        />
+        <Rect x={0} y={0} width={width} height={RULER_HEIGHT} fill="#2a2a2a" />
         {renderRuler()}
       </Layer>
 
+      {/* 插入位置指示器层 */}
+      <Layer listening={false}>{renderInsertPosition()}</Layer>
+
       {/* 播放头层：独立高频更新 */}
-      <Layer
-        ref={playheadLayerRef}
-        listening={true}
-      >
+      <Layer ref={playheadLayerRef} listening={true}>
         {renderPlayhead()}
       </Layer>
     </Stage>

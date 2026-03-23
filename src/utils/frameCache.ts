@@ -46,12 +46,7 @@ class FrameCache {
    * @param image HTMLImageElement
    * @param url 图片 URL
    */
-  set(
-    assetId: string,
-    frameIndex: number,
-    image: HTMLImageElement,
-    url: string
-  ): void {
+  set(assetId: string, frameIndex: number, image: HTMLImageElement, url: string): void {
     const key = this.getCacheKey(assetId, frameIndex)
     this.cache.set(key, {
       image,
@@ -107,10 +102,7 @@ class FrameCache {
    * @param thumbnailUrl 封面缩略图 URL（可选，若不提供则使用默认路径生成）
    * @returns Promise<HTMLImageElement>
    */
-  async preloadCoverThumbnail(
-    assetId: string,
-    thumbnailUrl?: string
-  ): Promise<HTMLImageElement> {
+  async preloadCoverThumbnail(assetId: string, thumbnailUrl?: string): Promise<HTMLImageElement> {
     // 检查是否已缓存
     if (this.has(assetId, 0)) {
       const cached = this.get(assetId, 0)
@@ -137,12 +129,8 @@ class FrameCache {
    * 批量预加载封面缩略图
    * @param assets 素材数组，包含 id 和可选的 thumbnail_url
    */
-  async preloadMultipleCovers(
-    assets: Array<{ id: string; thumbnail_url?: string }>
-  ): Promise<void> {
-    const promises = assets.map((asset) =>
-      this.preloadCoverThumbnail(asset.id, asset.thumbnail_url)
-    )
+  async preloadMultipleCovers(assets: Array<{ id: string; thumbnail_url?: string }>): Promise<void> {
+    const promises = assets.map((asset) => this.preloadCoverThumbnail(asset.id, asset.thumbnail_url))
     await Promise.allSettled(promises)
   }
 
@@ -178,12 +166,8 @@ class FrameCache {
    * 批量预加载帧序列
    * @param frames 帧数组，包含 assetId 和 frameIndex
    */
-  async preloadFrames(
-    frames: Array<{ assetId: string; frameIndex: number }>
-  ): Promise<void> {
-    const promises = frames.map(({ assetId, frameIndex }) =>
-      this.preloadFrame(assetId, frameIndex)
-    )
+  async preloadFrames(frames: Array<{ assetId: string; frameIndex: number }>): Promise<void> {
+    const promises = frames.map(({ assetId, frameIndex }) => this.preloadFrame(assetId, frameIndex))
     await Promise.allSettled(promises)
   }
 
@@ -195,12 +179,12 @@ class FrameCache {
    */
   getFrameUrl(assetId: string, frameIndex: number = 0): string {
     if (frameIndex === 0) {
-      // 封面缩略图路径：clipflow-thumbnails/{asset_id}/cover.jpg
-      return `${this.minioPublicEndpoint}/clipflow-thumbnails/${assetId}/cover.jpg`
+      // 封面缩略图路径：Lianghuo-thumbnails/{asset_id}/cover.jpg
+      return `${this.minioPublicEndpoint}/Lianghuo-thumbnails/${assetId}/cover.jpg`
     }
-    // 帧序列路径：clipflow-thumbnails/{asset_id}/frames/frame_{04d}.jpg
+    // 帧序列路径：Lianghuo-thumbnails/{asset_id}/frames/frame_{04d}.jpg
     const paddedIndex = frameIndex.toString().padStart(4, '0')
-    return `${this.minioPublicEndpoint}/clipflow-thumbnails/${assetId}/frames/frame_${paddedIndex}.jpg`
+    return `${this.minioPublicEndpoint}/Lianghuo-thumbnails/${assetId}/frames/frame_${paddedIndex}.jpg`
   }
 
   /**

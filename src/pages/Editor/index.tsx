@@ -1,30 +1,80 @@
 import * as React from 'react'
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 
 import { DndContext, DragOverlay, DragStartEvent, DragEndEvent } from '@dnd-kit/core'
+
+import { message } from 'antd'
 
 import AssetPanel from '@/components/Editor/AssetPanel'
 import PlayerSection from '@/components/Editor/PlayerSection'
 import PropertyPanel from '@/components/Editor/PropertyPanel'
 import Timeline from '@/components/Editor/Timeline'
 import TopBar from '@/components/Editor/TopBar'
+import { useEditorStore } from '@/stores/editorStore'
+import { generateId } from '@/utils/id'
 
 const EditorPage: React.FC = () => {
   const [activeDragData, setActiveDragData] = useState<any>(null)
+  const [timelineDropZoneActive, setTimelineDropZoneActive] = useState(false)
+  const [insertPosition, setInsertPosition] = useState<{ x: number; timeMs: number } | null>(null)
 
   const handleDragStart = (event: DragStartEvent) => {
     console.log('Drag start:', event.active.data.current)
     setActiveDragData(event.active.data.current)
+    // 如果拖拽的是素材，启用时间线 drop zone
+    if (event.active.data.current?.type === 'asset') {
+      setTimelineDropZoneActive(true)
+    }
   }
 
-  const handleDragEnd = (event: DragEndEvent) => {
-    console.log('Drag end:', event.active.data.current, event.over)
-    setActiveDragData(null)
-  }
+  const addClip = useEditorStore((state) => state.addClip)
+
+  const handleDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      const dragData = event.active.data.current
+      const dropTarget = event.over
+
+      console.log('Drag end:', dragData, dropTarget)
+      setActiveDragData(null)
+      setTimelineDropZoneActive(false)
+
+      // 如果是素材拖拽到时间线 drop zone
+      if (dragData?.type === 'asset' && dropTarget?.id === 'timeline-drop-zone') {
+        // 创建新的 Clip
+        const clip: any = {
+          id: generateId(),
+          asset_id: dragData.assetId,
+          timeline_start_ms: insertPosition?.timeMs || 0,
+          source_start_ms: 0,
+          source_end_ms: dragData.duration_ms || 10000, // 默认10秒
+          duration_ms: dragData.duration_ms || 10000,
+          speed: 1.0,
+          volume: 1.0,
+          filters: [],
+        }
+
+        // 获取当前时间线状态
+        const currentTimeline = useEditorStore.getState().timeline
+
+        // 添加到第一个视频轨道（或创建默认轨道）
+        if (currentTimeline && currentTimeline.tracks.length > 0) {
+          // 找到第一个视频轨道
+          const videoTrack = currentTimeline.tracks.find((t: any) => t.type === 'video')
+          const targetTrackId = videoTrack?.id || currentTimeline.tracks[0].id
+          addClip(targetTrackId, clip)
+          message.success('素材已添加到时间线')
+        } else {
+          message.error('时间线未初始化')
+        }
+      }
+    },
+    [addClip, insertPosition]
+  )
 
   const handleDragCancel = () => {
     console.log('Drag cancelled')
     setActiveDragData(null)
+    setTimelineDropZoneActive(false)
   }
 
   return (
@@ -49,7 +99,7 @@ const EditorPage: React.FC = () => {
             </div>
 
             {/* 时间线区域 */}
-            <Timeline />
+            <Timeline dropZoneActive={timelineDropZoneActive} onInsertPositionChange={setInsertPosition} />
           </div>
         </div>
       </div>
