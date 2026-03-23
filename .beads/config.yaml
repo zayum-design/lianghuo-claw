@@ -1,4 +1,2 @@
 repos:
   primary: "."
-  additional:
-    - "/Users/niujinhui/.beads-planning"
