@@ -1,4 +1,4 @@
-# ClipFlow 开发进度看板
+# lianghuo 开发进度看板
 
 ## 任务完成状态
 
@@ -54,25 +54,53 @@
 - 备注：后端脚手架验证完成，基本满足要求
 - 依赖：Task-01 已完成
 
-**Task-03: 后端素材数据模型与 MinIO 存储封装（完成迁移）** (beads-planning-k3n) 🔄
-- 状态：进行中（已认领）
+**Task-03: 后端素材数据模型与 MinIO 存储封装（完成迁移）** (beads-planning-k3n) ✅
+- 状态：已完成
+- 完成时间：2026-03-23
 - 目标：生成并运行 Alembic 迁移文件，完成 StorageService 封装
 - 依赖：Task-02 已完成
 
-**Task-04: 后端素材上传与异步处理接口（完善实现）** (beads-planning-65a)
-- 状态：待开始（被 Task-03 阻塞）
+**Task-04: 后端素材上传与异步处理接口（完善实现）** (beads-planning-65a) ✅
+- 状态：已完成
+- 完成时间：2026-03-23
 - 目标：完善素材上传接口和 Celery 异步处理任务
-- 依赖：Task-03 完成后开始
+- 依赖：Task-03 已完成
 
-**Task-05: 前端编辑器主布局框架** (beads-planning-6i7)
-- 状态：待开始
+**Task-05: 前端编辑器主布局框架** (beads-planning-6i7) ✅
+- 状态：已完成
+- 完成时间：2026-03-23
 - 目标：实现编辑器页面整体布局
 - 依赖：Task-01 已完成
 
-**Task-06: 前端素材面板（上传+列表）** (beads-planning-wym)
-- 状态：待开始（被 Task-04 和 Task-05 阻塞）
+**Task-06: 前端素材面板（上传+列表）** (beads-planning-wym) 🔄
+- 状态：进行中
 - 目标：实现素材面板完整功能
-- 依赖：Task-04 和 Task-05 完成后开始
+- 依赖：Task-04 和 Task-05 已完成
+
+### Task-04 文件修改状态
+正在修改的文件：
+- `backend/core/celery_app.py` [已完成]
+- `backend/api/v1/routers/assets.py` [已完成]
+- `backend/tasks/process_asset.py` [已完成]
+- `backend/services/ws_manager.py` [已完成]
+- `backend/main.py` [已完成]
+
+### Task-05 文件修改状态
+正在修改的文件：
+- `src/pages/Editor/index.tsx` [已完成]
+- `src/components/Editor/TopBar.tsx` [已完成]
+- `src/components/Editor/AssetPanel/index.tsx` [已完成]
+- `src/components/Editor/PlayerSection/index.tsx` [已完成]
+- `src/components/Editor/PropertyPanel/index.tsx` [已完成]
+- `src/components/Editor/Timeline/index.tsx` [已完成]
+
+### Task-06 文件修改状态
+正在修改的文件：
+- `src/hooks/useAssets.ts` [待修改]
+- `src/components/Editor/AssetPanel/AssetCard.tsx` [待修改]
+- `src/components/Editor/AssetPanel/index.tsx` [待修改]
+- `src/lib/apiPaths.ts` [待修改]
+- `src/lib/queryKeys.ts` [待修改]
 
 ## 已知问题/阻塞事项
 
