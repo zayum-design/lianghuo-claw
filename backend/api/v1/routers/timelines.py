@@ -6,12 +6,15 @@ from fastapi import (
     HTTPException,
     status,
 )
+from fastapi.responses import RedirectResponse
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.dependencies import get_current_user, CurrentUser
 from core.database import get_db
 from models.timeline import ProjectTimeline
+from models.project import Project
 from schemas.timeline import (
     Timeline,
     TimelineResolution,
@@ -53,19 +56,51 @@ def create_initial_timeline() -> Timeline:
     )
 
 
-@router.get("/timelines/default", response_model=TimelineResponse)
-async def get_default_timeline(
+@router.get("/timelines/default")
+async def get_default_timeline() -> RedirectResponse:
+    """
+    重定向到默认项目的时间线（向后兼容）
+    """
+    return RedirectResponse(
+        url=f"/api/v1/projects/{MOCK_PROJECT_ID}/timeline",
+        status_code=status.HTTP_301_MOVED_PERMANENTLY,
+    )
+
+
+@router.put("/timelines/default")
+async def save_default_timeline() -> RedirectResponse:
+    """
+    重定向到默认项目的时间线保存接口（向后兼容）
+    """
+    return RedirectResponse(
+        url=f"/api/v1/projects/{MOCK_PROJECT_ID}/timeline",
+        status_code=status.HTTP_301_MOVED_PERMANENTLY,
+    )
+
+
+@router.get("/projects/{project_id}/timeline", response_model=TimelineResponse)
+async def get_project_timeline(
+    project_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(get_current_user),
 ) -> TimelineResponse:
     """
-    获取默认时间线（当前用户的 Mock 项目时间线）
+    获取指定项目的时间线
 
     如果不存在则创建一条空时间线（含一条空视频轨）。
     """
-    # 当前阶段使用 Mock 用户和项目 ID
-    user_id = MOCK_USER_ID
-    project_id = MOCK_PROJECT_ID
+    # 验证项目归属
+    project_stmt = select(Project).where(
+        Project.id == project_id,
+        Project.user_id == current_user.id
+    )
+    project_result = await db.execute(project_stmt)
+    project = project_result.scalar_one_or_none()
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Project not found"
+        )
 
     # 查询现有时间线
     result = await db.execute(
@@ -82,11 +117,28 @@ async def get_default_timeline(
             version=1,
         )
         db.add(timeline_record)
-        await db.commit()
-        await db.refresh(timeline_record)
-
-        timeline_data = initial_timeline
-        version = 1
+        try:
+            await db.commit()
+            await db.refresh(timeline_record)
+        except IntegrityError:
+            # 并发插入冲突，其他请求已经创建了时间线
+            await db.rollback()
+            # 重新查询
+            result = await db.execute(
+                select(ProjectTimeline).where(ProjectTimeline.project_id == project_id)
+            )
+            timeline_record = result.scalar_one_or_none()
+            # 此时 timeline_record 应该存在
+            if timeline_record is None:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="时间线创建失败，请重试",
+                )
+            timeline_data = Timeline(**timeline_record.timeline_data)
+            version = timeline_record.version
+        else:
+            timeline_data = initial_timeline
+            version = 1
     else:
         # 从 JSONB 加载时间线数据
         timeline_data = Timeline(**timeline_record.timeline_data)
@@ -95,19 +147,28 @@ async def get_default_timeline(
     return TimelineResponse(timeline_data=timeline_data, version=version)
 
 
-@router.put("/timelines/default", response_model=TimelineResponse)
-async def save_default_timeline(
+@router.put("/projects/{project_id}/timeline", response_model=TimelineResponse)
+async def save_project_timeline(
+    project_id: uuid.UUID,
     request: TimelineSaveRequest,
     db: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(get_current_user),
 ) -> TimelineResponse:
     """
-    保存默认时间线（乐观锁版本控制）
-
-    客户端必须提供当前持有的版本号（client_version），若与服务端版本不匹配则返回 409 冲突。
+    保存指定项目的时间线（乐观锁版本控制）
     """
-    user_id = MOCK_USER_ID
-    project_id = MOCK_PROJECT_ID
+    # 验证项目归属
+    project_stmt = select(Project).where(
+        Project.id == project_id,
+        Project.user_id == current_user.id
+    )
+    project_result = await db.execute(project_stmt)
+    project = project_result.scalar_one_or_none()
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Project not found"
+        )
 
     # 查询现有时间线
     result = await db.execute(
@@ -142,3 +203,5 @@ async def save_default_timeline(
     # 返回更新后的时间线
     timeline_data = Timeline(**timeline_record.timeline_data)
     return TimelineResponse(timeline_data=timeline_data, version=timeline_record.version)
+
+
