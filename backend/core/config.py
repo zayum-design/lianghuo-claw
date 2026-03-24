@@ -3,11 +3,17 @@ from typing import List, Optional
 from functools import lru_cache
 
 from pydantic import Field, PostgresDsn, RedisDsn, field_validator
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
     """Application settings loaded from .env file and environment variables."""
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=False,
+    )
 
     # Database
     DATABASE_URL: PostgresDsn = Field(
@@ -50,9 +56,9 @@ class Settings(BaseSettings):
     )
 
     # CORS
-    CORS_ORIGINS: List[str] = Field(
-        default=["http://localhost:5173"],
-        description="Allowed CORS origins",
+    CORS_ORIGINS: str = Field(
+        default="http://localhost:5173",
+        description="Allowed CORS origins (comma-separated)",
     )
 
     # Debug
@@ -73,13 +79,18 @@ class Settings(BaseSettings):
         description="API v1 prefix",
     )
 
-    @field_validator("CORS_ORIGINS", mode="before")
+    @field_validator("CORS_ORIGINS")
     @classmethod
-    def parse_cors_origins(cls, v: str | List[str]) -> List[str]:
-        """Parse CORS_ORIGINS from comma-separated string or list."""
-        if isinstance(v, str):
-            return [origin.strip() for origin in v.split(",")]
+    def validate_cors_origins(cls, v: str) -> str:
+        """Validate CORS_ORIGINS is a non-empty string."""
+        if not v or not v.strip():
+            return "http://localhost:5173"
         return v
+
+    @property
+    def cors_origins_list(self) -> List[str]:
+        """Get CORS origins as a list."""
+        return [origin.strip() for origin in self.CORS_ORIGINS.split(",")]
 
     @field_validator("MINIO_PUBLIC_ENDPOINT")
     @classmethod
@@ -88,11 +99,6 @@ class Settings(BaseSettings):
         if v is None:
             return info.data.get("MINIO_ENDPOINT", "localhost:9000")
         return v
-
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        case_sensitive = False
 
 
 @lru_cache

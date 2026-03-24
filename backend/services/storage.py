@@ -20,10 +20,10 @@ class StorageService:
 
     # 项目所需的存储桶
     BUCKETS = {
-        "assets": "clipflow-assets",
-        "thumbnails": "clipflow-thumbnails",
-        "exports": "clipflow-exports",
-        "covers": "clipflow-covers",
+        "assets": "Lianghuo-assets",
+        "thumbnails": "Lianghuo-thumbnails",
+        "exports": "Lianghuo-exports",
+        "covers": "Lianghuo-covers",
     }
 
     def __init__(self):

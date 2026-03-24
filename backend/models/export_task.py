@@ -5,6 +5,7 @@ from sqlalchemy import (
     BigInteger,
     Column,
     Float,
+    ForeignKey,
     Index,
     Integer,
     String,
@@ -29,6 +30,7 @@ class ExportTask(Base):
     )
     project_id = Column(
         UUID(as_uuid=True),
+        ForeignKey("projects.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )

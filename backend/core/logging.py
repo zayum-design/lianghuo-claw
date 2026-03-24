@@ -33,7 +33,7 @@ def configure_logging() -> None:
         processors.append(
             structlog.dev.ConsoleRenderer(
                 colors=True,
-                pad_event=30,
+                pad_event_to=30,
             )
         )
     else:

@@ -18,7 +18,7 @@ from core.logging import (
     request_id,
     get_logger,
 )
-from api.v1.routers import health, assets, timelines
+from api.v1.routers import health, assets, timelines, projects
 from services.storage import get_storage_service
 
 settings = get_settings()
@@ -60,8 +60,8 @@ async def start_redis_listener():
         raise
     finally:
         await pubsub.unsubscribe(redis_channel)
-        await pubsub.close()
-        await redis_client.close()
+        await pubsub.aclose()
+        await redis_client.aclose()
 
 
 @asynccontextmanager
@@ -117,10 +117,13 @@ app = FastAPI(
 
 # ========== Middleware ==========
 
-class RequestIDMiddleware:
+from starlette.middleware.base import BaseHTTPMiddleware
+
+
+class RequestIDMiddleware(BaseHTTPMiddleware):
     """Middleware to add request ID to headers and context."""
 
-    async def __call__(self, request: Request, call_next):
+    async def dispatch(self, request: Request, call_next):
         # Get or generate request ID
         req_id = request.headers.get("X-Request-ID") or str(uuid.uuid4())
         request_id.set(req_id)
@@ -135,7 +138,7 @@ app.add_middleware(RequestIDMiddleware)
 app.add_middleware(LoggingMiddleware)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS,
+    allow_origins=settings.cors_origins_list,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -184,6 +187,7 @@ async def generic_exception_handler(request: Request, exc: Exception):
 app.include_router(health.router, prefix=settings.API_V1_PREFIX)
 app.include_router(assets.router, prefix=settings.API_V1_PREFIX)
 app.include_router(timelines.router, prefix=settings.API_V1_PREFIX)
+app.include_router(projects.router, prefix=settings.API_V1_PREFIX)
 
 # Root endpoint
 @app.get("/")

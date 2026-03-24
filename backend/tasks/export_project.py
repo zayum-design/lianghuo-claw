@@ -176,7 +176,7 @@ def build_filter_complex(
     clips: List[Clip],
     asset_files: Dict[uuid.UUID, Path],
     total_duration_ms: int,
-) -> Tuple[ffmpeg.nodes.Filterable, ffmpeg.nodes.Filterable]:
+) -> Tuple[ffmpeg.nodes.FilterableStream, ffmpeg.nodes.FilterableStream]:
     """
     构建FFmpeg filter_complex图
     返回 (video_filter, audio_filter) 元组
