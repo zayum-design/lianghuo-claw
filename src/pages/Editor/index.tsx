@@ -1,7 +1,8 @@
 import * as React from 'react'
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 
 import { DndContext, DragOverlay, DragStartEvent, DragEndEvent } from '@dnd-kit/core'
+import { useParams } from 'react-router-dom'
 
 import { message } from 'antd'
 
@@ -10,14 +11,34 @@ import PlayerSection from '@/components/Editor/PlayerSection'
 import PropertyPanel from '@/components/Editor/PropertyPanel'
 import Timeline from '@/components/Editor/Timeline'
 import TopBar from '@/components/Editor/TopBar'
+import ErrorBoundary from '@/components/ErrorBoundary'
+import { useTimeline } from '@/hooks/useTimeline'
+import { useTimelineSync } from '@/hooks/useTimelineSync'
 import { useEditorStore } from '@/stores/editorStore'
 import { generateId } from '@/utils/id'
 
 const EditorPage: React.FC = () => {
+  const { projectId } = useParams<{ projectId?: string }>()
   const [activeDragData, setActiveDragData] = useState<any>(null)
   const [timelineDropZoneActive, setTimelineDropZoneActive] = useState(false)
   const [insertPosition, setInsertPosition] = useState<{ x: number; timeMs: number } | null>(null)
 
+  // 加载时间线
+  const { isLoading: timelineLoading, error: timelineError } = useTimeline(projectId)
+
+  // 自动保存时间线
+  useTimelineSync(projectId)
+
+  // 处理时间线加载错误
+  useEffect(() => {
+    if (timelineError) {
+      message.error(`时间线加载失败: ${timelineError instanceof Error ? timelineError.message : '未知错误'}`)
+    }
+  }, [timelineError])
+
+  const addClip = useEditorStore((state) => state.addClip)
+
+  // 拖拽事件处理 - 必须在 early return 之前定义，以确保 hooks 调用顺序一致
   const handleDragStart = (event: DragStartEvent) => {
     console.log('Drag start:', event.active.data.current)
     setActiveDragData(event.active.data.current)
@@ -26,8 +47,6 @@ const EditorPage: React.FC = () => {
       setTimelineDropZoneActive(true)
     }
   }
-
-  const addClip = useEditorStore((state) => state.addClip)
 
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
@@ -77,61 +96,72 @@ const EditorPage: React.FC = () => {
     setTimelineDropZoneActive(false)
   }
 
+  // 显示加载状态 - 必须在所有 hooks 之后
+  if (timelineLoading) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-[#1a1a1a]">
+        <div className="text-gray-400">加载时间线...</div>
+      </div>
+    )
+  }
+
   return (
-    <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragCancel={handleDragCancel}>
-      <div className="h-screen flex flex-col overflow-hidden bg-[#1a1a1a] select-none">
-        {/* 顶部工具栏 */}
-        <TopBar />
+    <ErrorBoundary>
+      <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragCancel={handleDragCancel}>
+        <div className="h-screen flex flex-col overflow-hidden bg-[#1a1a1a] select-none">
+          {/* 顶部工具栏 */}
+          <TopBar projectId={projectId} />
 
-        {/* 主内容区域 */}
-        <div className="flex-1 flex overflow-hidden">
-          {/* 左侧素材面板 */}
-          <AssetPanel />
+          {/* 主内容区域 */}
+          <div className="flex-1 flex overflow-hidden">
+            {/* 左侧素材面板 */}
+            <AssetPanel />
 
-          {/* 工作区域 */}
-          <div className="flex-1 flex flex-col overflow-hidden">
-            {/* 预览区域 */}
-            <div className="flex-1 flex overflow-hidden">
-              {/* 播放器区域 */}
-              <PlayerSection />
-              {/* 属性面板 */}
-              <PropertyPanel />
+            {/* 工作区域 */}
+            <div className="flex-1 flex flex-col overflow-hidden">
+              {/* 预览区域 */}
+              <div className="flex-1 flex overflow-hidden">
+                {/* 播放器区域 */}
+                <PlayerSection />
+                {/* 属性面板 */}
+                <PropertyPanel />
+              </div>
+
+              {/* 时间线区域 */}
+              <Timeline dropZoneActive={timelineDropZoneActive} onInsertPositionChange={setInsertPosition} />
             </div>
-
-            {/* 时间线区域 */}
-            <Timeline dropZoneActive={timelineDropZoneActive} onInsertPositionChange={setInsertPosition} />
           </div>
         </div>
-      </div>
 
-      {/* 拖拽覆盖层 */}
-      <DragOverlay>
-        {activeDragData && (
-          <div className="w-32 opacity-60 pointer-events-none">
-            <div className="relative bg-[#1a1a1a] rounded-lg overflow-hidden shadow-lg">
-              <div style={{ paddingTop: '56.25%' }}>
-                <div className="absolute inset-0">
-                  {activeDragData.thumbnailUrl ? (
-                    <img
-                      src={activeDragData.thumbnailUrl}
-                      alt={activeDragData.assetName}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-blue-900/30 to-purple-900/30 flex items-center justify-center">
-                      <span className="text-gray-400 text-sm">素材</span>
-                    </div>
-                  )}
+        {/* 拖拽覆盖层 */}
+        <DragOverlay>
+          {activeDragData && (
+            <div className="w-32 opacity-60 pointer-events-none">
+              <div className="relative bg-[#1a1a1a] rounded-lg overflow-hidden shadow-lg">
+                <div style={{ paddingTop: '56.25%' }}>
+                  <div className="absolute inset-0">
+                    {activeDragData.thumbnailUrl ? (
+                      <img
+                        src={activeDragData.thumbnailUrl}
+                        alt={activeDragData.assetName}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-blue-900/30 to-purple-900/30 flex items-center justify-center">
+                        <span className="text-gray-400 text-sm">素材</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className="absolute bottom-0 left-0 right-0 bg-black/70 text-white text-xs p-2 truncate">
+                  {activeDragData.assetName}
                 </div>
               </div>
-              <div className="absolute bottom-0 left-0 right-0 bg-black/70 text-white text-xs p-2 truncate">
-                {activeDragData.assetName}
-              </div>
             </div>
-          </div>
-        )}
-      </DragOverlay>
-    </DndContext>
+          )}
+        </DragOverlay>
+      </DndContext>
+    </ErrorBoundary>
   )
 }
 
